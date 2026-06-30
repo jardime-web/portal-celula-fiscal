@@ -35,7 +35,7 @@
   body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.6; min-height: 100vh; }
 
   /* ── PIN overlay ── */
-  #pin-overlay { position: fixed; inset: 0; background: rgba(20,19,15,0.60); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+  #pin-overlay { position: fixed; inset: 0; background: rgba(20,19,15,0.60); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; }
   .pin-box { background: var(--surface); border-radius: 16px; padding: 2rem 2.25rem 1.75rem; text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,0.22); width: 310px; }
   .pin-icon { width: 48px; height: 48px; background: var(--gold-light); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
   .pin-icon i { color: var(--gold); font-size: 24px; }
@@ -380,6 +380,7 @@
   </div>
   <div class="topbar-right">
     <span class="topbar-badge" id="topbar-total">68 operações</span>
+    <button class="btn-tool" id="btn-admin-access" onclick="showAdminLogin()"><i class="ti ti-shield-lock"></i> Acesso Administradora</button>
     <div class="toolbar">
       <span id="sync-status" class="sync-status"></span>
       <div class="export-dropdown" id="export-dropdown">
@@ -513,7 +514,7 @@ let editingMetaIdx = null;
 
 // Garantir que o overlay do PIN sempre aparece ao carregar
 window.addEventListener('load', function() {
-  document.getElementById('pin-overlay').style.display = 'flex';
+  document.getElementById('pin-overlay').style.display = 'none';
   document.getElementById('admin-bar').classList.remove('show');
   document.getElementById('add-section').classList.remove('show');
   document.getElementById('main-area').classList.remove('is-admin');
@@ -534,6 +535,12 @@ function pinKey(d) {
 }
 function pinDel() { pinBuffer = pinBuffer.slice(0, -1); updateDots(); }
 function pinClear() { pinBuffer = ''; updateDots(); }
+function showAdminLogin() {
+  pinBuffer = '';
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-overlay').style.display = 'flex';
+  updateDots();
+}
 function updateDots() {
   const wrap = document.getElementById('pin-dots');
   if (!wrap) return;
@@ -554,6 +561,7 @@ function loginAsUser(user) {
   document.getElementById('admin-bar').classList.add('show');
   document.getElementById('add-section').classList.add('show');
   document.getElementById('main-area').classList.add('is-admin');
+  document.getElementById('btn-admin-access').style.display = 'none';
   updateEditorNameLabel();
   render();
 }
@@ -584,7 +592,8 @@ function logout() {
   document.getElementById('admin-bar').classList.remove('show');
   document.getElementById('add-section').classList.remove('show');
   document.getElementById('main-area').classList.remove('is-admin');
-  document.getElementById('pin-overlay').style.display = 'flex';
+  document.getElementById('pin-overlay').style.display = 'none';
+  document.getElementById('btn-admin-access').style.display = '';
   pinBuffer = ''; updateDots();
   render();
 }
@@ -1510,6 +1519,15 @@ document.addEventListener('keydown', function(e) {
   loadFieldOptions();
   loadAdminUsers();
   populateFieldSelects();
+  // Mostra algo na tela IMEDIATAMENTE (dados locais/já em cache no
+  // navegador), em vez de ficar com a tela em branco esperando a
+  // planilha responder. Assim que a busca na nuvem terminar, a lista
+  // é atualizada silenciosamente por baixo, sem o usuário perceber espera.
+  overrides  = safeJSON(localStorage.getItem(OVERRIDES_KEY), {});
+  customOps  = safeJSON(localStorage.getItem(STORAGE_KEY), []);
+  deletedIds = safeJSON(localStorage.getItem(DELETED_KEY), []);
+  updateStats();
+  render();
   await loadFromSheets();
   populateFieldSelects();
   updateStats();
